@@ -1,0 +1,79 @@
+---
+title: "rrw2"
+author: "Vindhya"
+date: "8/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(ggplot2)
+library(data.table)
+opts_chunk$set(echo = TRUE,results = 'hold')
+
+setwd("/Users/vindhyamullapudi/Documents/RR")
+act_data <- read.csv("activity.csv", header=TRUE, sep=",")
+
+act_data$date <- as.Date(act_data$date, format="%Y-%m-%d")
+act_data$interval <- as.factor(act_data$interval)
+
+str(act_data)
+
+head(act_data,10)
+
+steps_per_day <- aggregate(steps ~ date, data=act_data, FUN=sum)
+colnames(steps_per_day) <- c("date","steps")
+
+head(steps_per_day,10)
+
+ggplot(steps_per_day, aes(x=steps)) + geom_histogram(fill="blue", bindwidth=1000) + labs(title= "Steps/Day", x="steps taken", y="freq")
+
+mean_steps_per_day <- mean(steps_per_day$steps)
+mean_steps_per_day
+median_steps_per_day <- median(steps_per_day$steps)
+median_steps_per_day
+
+steps_per_interval <- aggregate(steps ~ interval, data = act_data, FUN=mean, na.rm=TRUE)
+steps_per_interval$interval <- as.integer(levels(steps_per_interval$interval)[steps_per_interval$interval])
+colnames(steps_per_interval) <- c("interval","steps")
+
+head(steps_per_interval,10)
+
+ggplot(steps_per_interval, aes(x=interval, y=steps)) + geom_line(col="blue", size =1) + labs(title= "Average Activity/Day", x= "interval", y="steps")
+
+max_interval <- steps_per_interval[which.max(steps_per_interval$steps),]
+max_interval
+
+missing_values <- sum(is.na(act_data$steps))
+missing_values
+
+new_act_data <- act_data
+index_of_na <- which(is.na(new_act_data$steps))
+for (i in index_of_na) {
+  new_act_data$steps[i] <- with(steps_per_interval, steps[interval = new_act_data$interval[]])
+}
+
+head(new_act_data,10)
+new_missing_values <- sum(is.na(new_act_data$steps))
+new_missing_values
+
+new_steps_per_day <- aggregate(steps ~ date, data=new_act_data, FUN=sum)
+colnames(new_steps_per_day) <- c("date","steps")
+ggplot(new_steps_per_day, aes(x=steps)) + geom_histogram(fill="blue",bindwidth =1000) + labs(title = "pt 2: Steps/Day", x="Steps/day",y="freq")
+
+new_mean_steps_per_day <- mean(new_steps_per_day$steps)
+new_mean_steps_per_day
+new_median_steps_per_day <- median(new_steps_per_day$steps)
+new_median_steps_per_day
+
+dt <- data.table(new_act_data)
+dt [, weekday := ifelse(weekdays(date) %in% c("Saturday","Sunday"),"Weekend","Weekday")]
+dt$weekday <- as.factor(dt$weekday)
+dt$interval <- as.integer(levels(dt$interval) [dt$interval])
+head(dt,10)
+
+steps_per_weekday <- aggregate(steps ~ interval+weekday, data=dt, FUN=mean)
+ggplot(steps_per_weekday, aes(x=interval, y=steps)) + geom_line(col="blue", size=1) + facet_wrap(~ weekday, nrow=2, ncol=1) + labs(x="interval", y="# of steps")
+
+```
+
